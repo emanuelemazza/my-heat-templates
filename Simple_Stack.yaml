@@ -3,11 +3,16 @@ heat_template_version: 2013-05-23
 description: Simple template to deploy a single compute instance
 
 parameters:
-  image:
+  kvm_image:
     type: string
     label: Image name or ID
     description: Image to be used for compute instance
     default: cirros-0.3.4-x86_64-uec
+  esxi_image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: cirros-0.3.4-x86_64-disk.vmdk
   flavor:
     type: string
     label: Flavor
@@ -30,36 +35,145 @@ parameters:
     default: public
 
 resources:
-  floating_ip:
+  cirros_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: cirros_security_group
+      rules:
+        - remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          port_range_min: 443
+          port_range_max: 443
+        - remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+  kvm1_floating_ip:
     type: OS::Neutron::FloatingIP
     properties:
       floating_network: { get_param: public_network }
-  my_port:
+  kvm1_port:
     type: OS::Neutron::Port
     properties:
       network: { get_param: private_network }
-  my_instance:
+      security_groups:
+        - { get_resource: cirros_security_group }
+  kvm1_instance:
     type: OS::Nova::Server
     properties:
-      image: { get_param: image }
+      image: { get_param: kvm_image }
       flavor: { get_param: flavor }
       key_name: { get_param: key }
+      name: cirros-1
       networks:
-        - port: { get_resource: my_port }
+        - port: { get_resource: kvm1_port }
       user_data: |
         #!/bin/sh
         echo "Hello, World!"
       user_data_format: RAW
-  floating_ip_assoc:
+  kvm1_floating_ip_assoc:
     type: OS::Neutron::FloatingIPAssociation
     properties:
-      floatingip_id: { get_resource: floating_ip }
-      port_id: { get_resource: my_port }
-
+      floatingip_id: { get_resource: kvm1_floating_ip }
+      port_id: { get_resource: kvm1_port }
+  kvm2_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network }
+  kvm2_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: private_network }
+      security_groups:
+        - { get_resource: cirros_security_group }
+  kvm2_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: kvm_image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      name: cirros-2
+      networks:
+        - port: { get_resource: kvm2_port }
+      user_data: |
+        #!/bin/sh
+        echo "Hello, World!"
+      user_data_format: RAW
+  kvm2_floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: kvm2_floating_ip }
+      port_id: { get_resource: kvm2_port }
+  esxi1_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network }
+  esxi1_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: private_network }
+      security_groups:
+        - { get_resource: cirros_security_group }
+  esxi1_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: esxi_image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      name: cirros-3
+      networks:
+        - port: { get_resource: esxi1_port }
+      user_data: |
+        #!/bin/sh
+        echo "Hello, World!"
+      user_data_format: RAW
+  esxi1_floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: esxi1_floating_ip }
+      port_id: { get_resource: esxi1_port }
+  esxi2_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_network }
+  esxi2_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: private_network }
+      security_groups:
+        - { get_resource: cirros_security_group }
+  esxi2_instance:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: esxi_image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: key }
+      name: cirros-4
+      networks:
+        - port: { get_resource: esxi2_port }
+      user_data: |
+        #!/bin/sh
+        echo "Hello, World!"
+      user_data_format: RAW
+  esxi2_floating_ip_assoc:
+    type: OS::Neutron::FloatingIPAssociation
+    properties:
+      floatingip_id: { get_resource: esxi2_floating_ip }
+      port_id: { get_resource: esxi2_port }
 outputs:
-  instance_name:
-    description: Name of the instance
-    value: { get_attr: [my_instance, name] }
-  instance_ip:
-    description: IP address of the instance
-    value: { get_attr: [floating_ip, floating_ip_address] }
+  cirros-1:
+    description: IP address of the cirros-1 instance
+    value: { get_attr: [kvm1_floating_ip, floating_ip_address] }
+  cirros-2:
+    description: IP address of the cirros-2 instance
+    value: { get_attr: [kvm2_floating_ip, floating_ip_address] }
+  cirros-3:
+    description: IP address of the cirros-3 instance
+    value: { get_attr: [esxi1_floating_ip, floating_ip_address] }
+  cirros-4:
+    description: IP address of the cirros-4 instance
+    value: { get_attr: [esxi2_floating_ip, floating_ip_address] }
