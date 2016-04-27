@@ -27,7 +27,7 @@ parameters:
     type: string
     label: Private network name or ID
     description: Network to attach instance to.
-    default: private
+    default: external
   public_network:
     type: string
     label: Public network name or ID
