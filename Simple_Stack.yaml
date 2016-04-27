@@ -27,12 +27,12 @@ parameters:
     type: string
     label: Private network name or ID
     description: Network to attach instance to.
-    default: external
+    default: private
   public_network:
     type: string
     label: Public network name or ID
     description: Public network with floating IP addresses.
-    default: public
+    default: external
 
 resources:
   cirros_security_group:
